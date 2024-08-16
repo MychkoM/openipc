@@ -3,8 +3,6 @@ on:
   pull_request:
     branches:
       - master
-  schedule:
-    - cron: '30 23 * * *'
   workflow_dispatch:
 
 env:
@@ -20,8 +18,6 @@ jobs:
       matrix:
         include:
           # Hisilicon [HI3516CV100]
-          - {"platform": "hi3516cv100", "release": "lite"}
-          - {"platform": "hi3518cv100", "release": "lite"}
           - {"platform": "hi3518ev100", "release": "lite"}
           
     steps:
