@@ -14,65 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Sigmastar [I6B]
-          - {"platform": "ssc335"}
-
-          # Sigmastar [I6C]
-          - {"platform": "ssc377"}
-
-          # Sigmastar [I6E]
-          - {"platform": "ssc338q"}
-
-          # Ingenic [T31]
-          - {"platform": "t31"}
-
-          # Ingenic [T31] with GLIBC
-          - {"platform": "t31glibc"}
-
-          # Ingenic [T40]
-          - {"platform": "t40"}
-
           # Hisilicon [HI3516CV100]
           - {"platform": "hi3516cv100"}
-
-          # Hisilicon [HI3516CV200]
-          - {"platform": "hi3516cv200"}
-
-          # Hisilicon [HI3516CV300]
-          - {"platform": "hi3516cv300"}
-
-          # Hisilicon [HI3516CV500]
-          - {"platform": "hi3516cv500"}
-
-          # Hisilicon [HI3516EV200]
-          - {"platform": "hi3516ev200"}
-
-          # Hisilicon [HI3519V101]
-          - {"platform": "hi3519v101"}
-
-          # Hisilicon [HI3536CV100]
-          - {"platform": "hi3536cv100"}
-
-          # Goke [GK710X]
-          - {"platform": "gk7102"}
-
-          # Fullhan
-          - {"platform": "fh8852v100"}
-          - {"platform": "fh8852v200"}
-
-          # Grainmedia
-          - {"platform": "gm8136"}
-
-          # Novatek
-          - {"platform": "nt98562"}
-
-          # Rockchip
-          - {"platform": "rv1126"}
-
-          # Xiongmai
-          - {"platform": "xm510"}
-          - {"platform": "xm530"}
-
+          
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
