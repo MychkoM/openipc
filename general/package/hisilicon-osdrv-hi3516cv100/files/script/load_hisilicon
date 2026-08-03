@@ -69,6 +69,16 @@ insert_audio() {
 	echo "insert audio"
 }
 
+reset_sensor() {
+	devmem 0x200f0124 32 0x0
+	devmem 0x20140400 32 0x22
+	devmem 0x20140008 32 0x2
+	usleep 100000
+	devmem 0x20140008 32 0x0
+	usleep 100000
+	devmem 0x20140008 32 0x2
+}
+
 remove_audio() {
 	rmmod -w hi3518_adec
 	rmmod -w hi3518_aenc
@@ -355,6 +365,8 @@ insert_ko() {
 
 	insert_audio
 	echo "==== Your input Sensor type is $SENSOR ===="
+
+	reset_sensor
 
 	insmod wdt.ko #nodeamon=1
 
