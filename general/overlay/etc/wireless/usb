@@ -5,9 +5,15 @@ set_gpio() {
 	sleep 1
 }
 
-# Generic MT7601U
+# Generic MT7601U (in-kernel driver)
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
+	exit 0
+fi
+
+# Generic MT7601U (MediaTek proprietary driver, mt7601sta)
+if [ "$1" = "mt7601sta-generic" ]; then
+	modprobe mt7601sta
 	exit 0
 fi
 
