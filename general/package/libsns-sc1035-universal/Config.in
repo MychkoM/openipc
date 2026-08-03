@@ -1,0 +1,15 @@
+config BR2_PACKAGE_LIBSNS_SC1035_UNIVERSAL
+	bool "libsns-sc1035-universal"
+	help
+	  Universal SC1035 sensor library built from source: a single
+	  library for 720p and 960p. The capture window is selected
+	  automatically from VI introspection (HI_MPI_VI_GetChnAttr),
+	  any fps 5..30 is produced via the VTS formula
+	  (VTS = round(30000/fps), clamped to 1000..6000 @ PLL 54 MHz).
+
+	  Installs libsns_sc1035_universal.so into /usr/lib/sensors/ and
+	  overwrites the stock /etc/sensors/sc1035_960p.ini (installs
+	  after hisilicon-osdrv-hi3516cv100). Default sensor mode:
+	  1280x960 @ 18 fps. Majestic is configured by the user.
+
+	  https://github.com/MychkoM/libsns-sc1035-universal
