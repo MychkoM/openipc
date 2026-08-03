@@ -102,7 +102,7 @@ insert_isp() {
 
 insert_sns() {
         case $SENSOR in
-        9m034 | jxf23 | ov2718 | ov9732 | ov9750 | ov9752 | jxh62 | sc1235 | sc2235 | ov9712 | gc2023)
+        9m034 | jxf23 | ov2718 | ov9732 | ov9750 | ov9752 | jxh62 | sc1235 | sc2235 | ov9712 | gc2023 | gc2033)
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
@@ -346,14 +346,14 @@ calc_mmz_info() {
                 awk 'BEGIN { temp = 0; }
         {
                 temp = $1/1024/1024 + $2;
-        } 
+        }
         END { printf("0x%x00000\n", temp); }')
 
         mmz_size=$(echo "$mem_total $os_mem_size" |
                 awk 'BEGIN { temp = 0; }
         {
                 temp = $1 - $2;
-        } 
+        }
         END { printf("%dM\n", temp); }')
         echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
