@@ -1,0 +1,80 @@
+#!/bin/sh
+
+# Cold-start workaround for the SC1035 sensor on hi3518ev100 boards:
+# after power-on the sensor occasionally stalls and holds the I2C bus, so no
+# frames reach VIU (RTSP hands out SDP but the VENC loop times out with an
+# empty fd set). Pulsing the sensor reset pins revives it; this is the same
+# sequence as reset_sensor() in load_hisilicon (pinmux + reset pulse).
+reset_sensor() {
+    [ -x /usr/bin/devmem ] || return 0
+    devmem 0x200f0124 32 0x0
+    devmem 0x20140400 32 0x22
+    devmem 0x20140008 32 0x2
+    usleep 100000
+    devmem 0x20140008 32 0x0
+    usleep 100000
+    devmem 0x20140008 32 0x2
+}
+
+DAEMON="divinus"
+DAEMON_PATH="/usr/bin/$DAEMON"
+DAEMON_ARGS="-c /etc/divinus.yaml"
+
+# Find the daemon by executable, never through a pidfile: given -p, busybox
+# start-stop-daemon inspects only the pid in that file and never scans /proc,
+# so a stale pidfile makes -S start a SECOND instance (which dies on the busy
+# sensor HAL) and -K signal an unrelated process. -x scans every process
+# instead, and -a keeps argv[0] as "divinus" so ps output is unchanged.
+running() {
+    start-stop-daemon -t -K -q -x "$DAEMON_PATH"
+}
+
+start() {
+    echo -n "Starting $DAEMON: "
+    if ! running; then
+        reset_sensor
+    fi
+    start-stop-daemon -b -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
+    case $? in
+        0) echo "OK"; return 0 ;;
+        1) echo "OK (already running)"; return 0 ;;
+        *) echo "FAIL"; return 1 ;;
+    esac
+}
+
+stop() {
+    echo -n "Stopping $DAEMON: "
+    start-stop-daemon -K -q -x "$DAEMON_PATH"
+    i=0
+    while running && [ $i -lt 10 ]; do
+        i=$((i + 1))
+        sleep 1
+    done
+    if running; then
+        echo "FAIL"
+        return 1
+    fi
+    rm -f "/var/run/$DAEMON.pid"
+    echo "OK"
+}
+
+case "$1" in
+    start|stop)
+        $1
+        ;;
+
+    restart)
+        stop || exit 1
+        sleep 3
+        start
+        ;;
+
+    reload)
+        start-stop-daemon -K -s 1 -q -x "$DAEMON_PATH"
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|restart|reload}"
+        exit 1
+        ;;
+esac

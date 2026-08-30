@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-DIVINUS_SITE = $(call github,openipc,divinus,$(DIVINUS_VERSION))
+DIVINUS_SITE = $(call github,MychkoM,divinus,$(DIVINUS_VERSION))
 DIVINUS_VERSION = HEAD
 DIVINUS_LICENSE = MIT
 DIVINUS_LICENSE_FILES = LICENSE
@@ -25,6 +25,9 @@ define DIVINUS_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/divinus
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(DIVINUS_PKGDIR)/files/S95divinus
 endef
 
 $(eval $(generic-package))
