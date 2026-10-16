@@ -12,7 +12,9 @@ why.
 | `br-ext-chip-hisilicon/board/hi3516cv100/hi3518ev100.generic.config` | RTL8192 (SE/CU/WIFI) disabled, **RTL8188EU enabled** (`CONFIG_R8188EU=m`, `CONFIG_88EU_AP_MODE=y`) | use the onboard Realtek 8188 WLAN instead of RTL8192 parts |
 | `br-ext-chip-hisilicon/configs/hi3518ev100_lite_defconfig` | MediaTek **MT7601U removed**, **RTL8188EU added** (`BR2_PACKAGE_RTL8188EU=y`, firmware `RTL_8188EU=y`) | replace the MT7601U driver with the board's actual RTL8188EU adapter |
 | `general/package/hisilicon-osdrv-hi3516cv100/files/script/load_hisilicon` | new `reset_sensor()` (devmem to 0x200f0124, 0x20140400, 0x20140008), called on `insert_ko` | hard-reset the SC1035 sensor at SDK load; without it the sensor fails to start and holds the I2C bus busy |
-| `general/package/hisilicon-osdrv-hi3516cv100/files/sensor/config/sc1035_960p.ini` | `Isp_H` 720→**960** | native 1280×960@30fps sensor mode (matches camera panel) |
+| `general/package/hisilicon-osdrv-hi3516cv100/files/sensor/config/sc1035_960p.ini` | geometry 960→720 (`Isp_H`, `CapRect_Height`, `DestSize_Height`), `Isp_FrameRate=25` | stock ini retargeted to the 720p25 duty mode; **superseded** — the `libsns-sc1035-universal` package installs its own ini over this one |
+| `general/package/libsns-sc1035-universal/` (new package) | source-built universal SC1035 sensor library (`BR2_PACKAGE_LIBSNS_SC1035_UNIVERSAL`): pulls [MychkoM/libsns-sc1035-universal](https://github.com/MychkoM/libsns-sc1035-universal) `v1.4.0`, compiles `libsns_sc1035_universal.so` (720p/960p from VI introspection, fps 5..30 via VTS formula), installs it to `/usr/lib/sensors/` + `sc1035_960p.ini` (overwrites stock) | sensor ini default **1280x960 @ 18 fps**; majestic is configured per camera by the user; one library, no per-mode builds |
+| `general/package/Config.in` | + `source` line for the new package | register `libsns-sc1035-universal` |
 
 ## Wired adapter (hieth) — u-boot env requirements
 
@@ -72,4 +74,9 @@ Notes:
 ## Camera runtime setup
 
 * osmem `36M` / MMZ `28M` (set via u-boot env `osmem`)
-* video `1280x960@20fps`, h264 `1024kbit`
+* video `1280x960@18fps`, h264 `1024kbit` — sensor ini default via the
+  `libsns-sc1035-universal` package, majestic.yaml is configured per
+  camera by the user (VTS 1667 @ PLL 54 MHz — 18.00 fps measured,
+  96% of the 23 Mpix/s VEDU budget)
+* measured stream health (20s probe): 18.00 fps, max interframe gap
+  0.07s, 0 stalls / seq gaps / ts anomalies
