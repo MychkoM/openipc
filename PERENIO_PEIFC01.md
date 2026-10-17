@@ -1,25 +1,24 @@
 # Perenio PEIFC01 (Hi3518EV200 / GC2033) — Board Notes
 
-Board: **IPC18EV200_PT_V1.0** ("NIP-55F2B", manufactured by Shenzhen Hichip Vision Technology), SoC **Hisilicon Hi3518EV200**, sensor **GalaxyCore GC2033** (2-lane MIPI, RAW10, 1920x1080@30fps, BAYER_RGGB).
+Board: **IPC18EV200_PT_V1.0** ("NIP-55F2B", manufactured by Shenzhen Hichip Vision Technology), SoC **Hisilicon Hi3518EV200**, sensor **GalaxyCore GC2033** (DVP parallel, RAW10, 1920x1080, BAYER_RGGB).
 
 ## Changes made
 
 ### 1. Sensor config fix — `gc2033_i2c_1080p.ini`
 File: [general/package/hisilicon-osdrv-hi3516cv200/files/sensor/config/gc2033_i2c_1080p.ini](general/package/hisilicon-osdrv-hi3516cv200/files/sensor/config/gc2033_i2c_1080p.ini)
 
-General facts about the GC2033 sensor on this board:
-- Connected via **MIPI CSI-2**, 2 data lanes, RAW10 output — not DVP.
-- Native resolution **1920x1080 @ 30fps**.
+General facts about the GC2033 sensor on this board (corrected 2026-10-16 after live verification — earlier "MIPI" wording was wrong):
+- Connected via a **DVP parallel bus** (10 data bits on this PCB). GC2033 is a DVP-only part; the ini's MIPI-looking fields (`dev_attr`, `data_type`, `lane_id`, comment "GC2033 is 2-lane MIPI") are inert template leftovers — they only apply when `input_mode=0`, while the working config uses `input_mode=4` + `Input_mod=2` (VI_INPUT_MODE_DIGITAL_CAMERA).
+- Native resolution **1920x1080** (30 fps; the ZIVIF sibling board runs 20 fps for night exposure headroom — see ZIVIF.md).
 - Bayer pattern is **RGGB**.
 - IR-LED/IRCUT switching is fully external to the sensor driver and must be handled by board GPIOs (see pin table below).
 
-The file was misconfigured for a DVP sensor instead of MIPI, causing wrong colors (purple/magenta tint) and a wrong framerate. Fixed:
+The stock vendor file was misconfigured for a different PCB revision, causing a solid purple frame and a wrong framerate. Fixed:
 - `DllFile = libsns_gc2033.so`
-- `dev_attr = 0` (MIPI, was `2`)
-- Added `[mipi]` section: `data_type = 2`, `lane_id = 0|1|-1|-1|-1|-1|-1|-1|`
 - `Isp_FrameRate = 30` (was `15`)
 - `Isp_Bayer = 0` — RGGB (was `1` — GRBG, wrong pattern causing the color tint)
-- `Mask_0 = 0x3FF0000` (MIPI mask, was `0xffc00000` — DVP mask)
+- `Mask_0 = 0x3FF0000` — DVP DATA-bus bit-mask, bits 16–25 = 10-bit wiring on this PCB (was `0xffc00000`, a mask for a different DVP pinout → full purple frame). On the 12-bit ZIVIF boards the same field needs `0xFFF0000` — see ZIVIF.md.
+- (`dev_attr`, `data_type`, `lane_id` + the whole `[mipi]` section were **removed from the repo file** on 2026-10-16 — md5 `f8665d4c…`, git diff = 13 deletions, 0 insertions; HAL parses the file fine without them, verified live. ZIVIF boards still need post-flash per-board overrides: `Mask_0=0xFFF0000`, night fps — see ZIVIF.md.)
 
 
 ### 2. GPIO board wiring
@@ -51,3 +50,12 @@ The onboard WiFi module is a **MediaTek MT7601U** USB dongle (`lsusb` ID `148f:7
 - On the camera after flashing: `fw_setenv wlandev mt7601sta-generic`.
 
 **Status** (as of 2026-09-20): defconfig + wireless profile changes are in the working tree, ready for a **CI/rebuild+flash**; the driver will only be built for this board by compiling it with the firmware (no prebuilt `.ko` can be dropped in due to the ARMv5 kernel). After flashing, verify with the 200MB load test and compare against the logs of the current mainline driver.
+
+### 4. Frame-rate chain on hi3518ev200 / majestic (verified 2026-10-16)
+Why "30 fps in the config" can be 20 fps in the stream:
+- **SoC budget**: hi3518ev200 carries ~**30× 1920x1080 frames/sec across ALL streams combined** (majestic enforces it; message: "this SoC carries %u 1920x1080 frames a second across its streams"). Default split: h264@20 + MJPEG@5.
+- **venc default = 20** when `video0.fps` is not set; `r_frame_rate` in RTSP still advertises the sensor rate → the mismatch is invisible until you count frames (`avg_frame_rate`).
+- **Night AE slow_shutter**: long exposure (e.g. 125000 µs ≈ 8 fps worth) forces frame drops BEFORE the encoder (venc `UserGet` vs `GetTimes` gap) → duplicate-DTS pairs in the stream (`ffmpeg: non monotonically increasing dts`), unstable output rate.
+- **Fix for a true 30**: disable the MJPEG stream, `cli -s .video0.fps 30` → clean 30/30, DTS errors gone.
+- **Fix for better night footage**: `Isp_FrameRate 30→20` in the sensor ini → exposure ceiling 33 ms→50 ms (+50% light per frame), VI IntGapT ≈ 49989 µs rock-steady, venc auto-caps to the sensor rate. Applied on the ZIVIF board (see ZIVIF.md §5).
+- Night pipeline on this family end-to-end: light-sensor GPIO → majestic `Change mode to NIGHT` → IRCUT off → IQ night profile (`[ir_3dnr]`) loads.
